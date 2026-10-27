@@ -1,0 +1,75 @@
+{
+  "description": "Inputs, the expected decision-table output, and the expected expression results for the fixtures.",
+  "expressions": [
+    { "expression": "1 + 2 * 3", "context": {}, "expected": 7 },
+    { "expression": "(1 + 2) * 3", "context": {}, "expected": 9 },
+    { "expression": "2 ** 3", "context": {}, "expected": 8 },
+    { "expression": "2 ** -1", "context": {}, "expected": 0.5 },
+    { "expression": "-2 ** 2", "context": {}, "expected": 4 },
+    { "expression": "0.1 + 0.2", "context": {}, "expected": 0.3 },
+    { "expression": "1 = 1.0", "context": {}, "expected": true },
+    { "expression": "null = null", "context": {}, "expected": true },
+    { "expression": "x = null", "context": { "x": null }, "expected": true },
+    { "expression": "x = null", "context": { "x": 1 }, "expected": false },
+    { "expression": "null and false", "context": {}, "expected": false },
+    { "expression": "null and true", "context": {}, "expected": null },
+    { "expression": "null or true", "context": {}, "expected": true },
+    { "expression": "null or false", "context": {}, "expected": null },
+    { "expression": "not(null)", "context": {}, "expected": null },
+    { "expression": "if null then 1 else 2", "context": {}, "expected": 2 },
+    { "expression": "5 between 1 and 10", "context": {}, "expected": true },
+    { "expression": "5 in [1..10]", "context": {}, "expected": true },
+    { "expression": "10 in (1..10)", "context": {}, "expected": false },
+    { "expression": "5 in ]1..10[", "context": {}, "expected": true },
+    { "expression": "1 in (1, 2, 3)", "context": {}, "expected": true },
+    { "expression": "1 / 0", "context": {}, "expected": null },
+    { "expression": "[10, 20, 30][2]", "context": {}, "expected": 20 },
+    { "expression": "[10, 20, 30][-1]", "context": {}, "expected": 30 },
+    { "expression": "count([1, 2, 3])", "context": {}, "expected": 3 },
+    { "expression": "count(1)", "context": {}, "expected": 1 },
+    { "expression": "sum([1, 2, 3])", "context": {}, "expected": 6 },
+    { "expression": "mean([1, 2, 3])", "context": {}, "expected": 2 },
+    { "expression": "min([3, 1, 2])", "context": {}, "expected": 1 },
+    { "expression": "max([3, 1, 2])", "context": {}, "expected": 3 },
+    { "expression": "mean([])", "context": {}, "expected": null },
+    { "expression": "all([])", "context": {}, "expected": true },
+    { "expression": "any([])", "context": {}, "expected": false },
+    { "expression": "contains(\"hello\", \"ell\")", "context": {}, "expected": true },
+    { "expression": "substring(\"hello\", 2, 3)", "context": {}, "expected": "ell" },
+    { "expression": "substring(\"hello\", 2)", "context": {}, "expected": "ello" },
+    { "expression": "number(\"1 234,56\", \" \", \",\")", "context": {}, "expected": 1234.56 },
+    { "expression": "string(1.5)", "context": {}, "expected": "1.5" },
+    { "expression": "date(\"2024-02-29\")", "context": {}, "expected": "2024-02-29" },
+    { "expression": "date(\"2024-02-30\")", "context": {}, "expected": null },
+    { "expression": "date(\"2024-01-02\") + duration(\"P1D\")", "context": {}, "expected": "2024-01-03" },
+    { "expression": "date(\"2024-01-31\") + duration(\"P1M\")", "context": {}, "expected": "2024-02-29" },
+    { "expression": "duration(\"P1DT2H\")", "context": {}, "expected": "P1DT2H" },
+    { "expression": "customer age > 30", "context": { "customer age": 35 }, "expected": true },
+    { "expression": "{a: 1, b: 2}.a", "context": {}, "expected": 1 },
+    { "expression": "x.y", "context": { "x": { "y": 7 } }, "expected": 7 },
+    { "expression": "x.z", "context": { "x": { "y": 7 } }, "expected": null },
+    { "expression": "{a: 1, b: 2}[\"b\"]", "context": {}, "expected": null },
+    { "expression": "? = 5", "context": { "?": 5 }, "expected": true }
+  ],
+  "tables": [
+    {
+      "table": "discount.json",
+      "cases": [
+        { "inputs": { "age": 20, "risk": "high" }, "expected": { "discount": 0.1, "band": "young-high" } },
+        { "inputs": { "age": 20, "risk": "low" }, "expected": { "discount": 0.05, "band": "young-low" } },
+        { "inputs": { "age": 30, "risk": "medium" }, "expected": { "discount": 0.15, "band": "adult" } },
+        { "inputs": { "age": 70, "risk": "high" }, "expected": { "discount": 0.2, "band": "senior" } },
+        { "inputs": { "age": 30, "risk": "high" }, "expected": { "discount": 0, "band": "none" } }
+      ]
+    },
+    {
+      "table": "shipping.json",
+      "cases": [
+        { "inputs": { "weight": 0.5, "country": "US" }, "expected": { "price": 5, "note": "flat US" } },
+        { "inputs": { "weight": 4, "country": "US" }, "expected": { "price": 6, "note": "weight-based" } },
+        { "inputs": { "weight": 12, "country": "US" }, "expected": { "price": 25, "note": "heavy" } },
+        { "inputs": { "weight": 0.5, "country": "DE" }, "expected": { "price": 50, "note": "manual quote" } }
+      ]
+    }
+  ]
+}

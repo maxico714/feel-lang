@@ -1,0 +1,14 @@
+{
+  "name": "car insurance discount",
+  "description": "First-match decision table: age band and risk class determine the discount.",
+  "inputs": ["age", "risk"],
+  "outputs": ["discount", "band"],
+  "hit_policy": "first",
+  "rules": [
+    { "when": { "age": "[18..25]", "risk": "high" }, "then": { "discount": 0.1, "band": "young-high" } },
+    { "when": { "age": "[18..25]", "risk": "low" }, "then": { "discount": 0.05, "band": "young-low" } },
+    { "when": { "age": "[26..60]", "risk": ["low", "medium"] }, "then": { "discount": 0.15, "band": "adult" } },
+    { "when": { "age": "[61..]", "risk": "-" }, "then": { "discount": 0.2, "band": "senior" } }
+  ],
+  "default": { "discount": 0, "band": "none" }
+}

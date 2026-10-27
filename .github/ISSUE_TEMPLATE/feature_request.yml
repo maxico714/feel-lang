@@ -1,0 +1,31 @@
+name: Feature request
+description: Propose a FEEL construct, function, CLI option or decision-table feature.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: The expression or table you cannot write today, and where it comes from (spec section, DMN model).
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Syntax and semantics, with expected results for normal and edge cases.
+    validations:
+      required: true
+  - type: textarea
+    id: oracle
+    attributes:
+      label: Oracle evidence
+      description: If you have dsntk or another engine, paste the same expression's result there. Divergences are documented, not hidden.
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: This adds no runtime dependencies (stdlib only)
+        - label: This respects the input/token/depth caps
+        - label: This does not copy GPL-derived material

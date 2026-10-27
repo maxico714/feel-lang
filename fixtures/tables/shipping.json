@@ -1,0 +1,15 @@
+{
+  "name": "order shipping",
+  "description": "Unary-test cells with comparison operators, lists and computed outputs.",
+  "inputs": ["weight", "country"],
+  "outputs": ["price", "note"],
+  "rules": [
+    {
+      "when": { "weight": "< 1", "country": ["US", "CA"] },
+      "then": { "price": 5, "note": "= \"flat \" + country" }
+    },
+    { "when": { "weight": "<= 10", "country": "US" }, "then": { "price": "= weight * 1.5", "note": "weight-based" } },
+    { "when": { "weight": "> 10" }, "then": { "price": 25, "note": "heavy" } }
+  ],
+  "default": { "price": 50, "note": "manual quote" }
+}

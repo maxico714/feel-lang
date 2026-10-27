@@ -1,0 +1,44 @@
+name: Bug report
+description: A wrong result, a parse error on valid FEEL, or a crash.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For anything security-sensitive, use the private "Report a vulnerability" form instead.
+  - type: input
+    id: version
+    attributes:
+      label: feel-lang version
+      description: Output of `feel-lang --version`
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version and OS
+      placeholder: Python 3.12.10, Windows 10
+    validations:
+      required: true
+  - type: textarea
+    id: expression
+    attributes:
+      label: Expression or decision table
+      description: Minimal reproduction, with the context if any.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: If you compared with dsntk or another engine, say which version and what it returned.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: Include the error code (`E_PARSE`, `E_EVAL`, …) and message if one was raised.
+    validations:
+      required: true
