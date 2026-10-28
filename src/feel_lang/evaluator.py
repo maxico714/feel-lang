@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass
-from decimal import Decimal, DivisionByZero, InvalidOperation
+from decimal import Decimal, DecimalException
 from typing import Any
 
 from .errors import ArgumentError, EvalError
@@ -30,6 +31,7 @@ from .nodes import (
 from .values import (
     Duration,
     add_duration,
+    decimal_within_limits,
     format_number,
     is_number,
     number,
@@ -147,7 +149,10 @@ class Evaluator:
         method = getattr(self, f"_eval_{type(node).__name__.lower()}", None)
         if method is None:  # pragma: no cover - every node has a method
             raise EvalError(f"unsupported node {type(node).__name__}", position=node.position)
-        return method(node)
+        value = method(node)
+        if isinstance(value, Decimal) and not decimal_within_limits(value):
+            return None
+        return value
 
     # -- nodes -------------------------------------------------------------
     def _eval_literal(self, node: Literal) -> Any:
@@ -267,7 +272,7 @@ class Evaluator:
                 return left_number / right_number
             if operator == "**":
                 return _power(left_number, right_number)
-        except (DivisionByZero, InvalidOperation, OverflowError, ValueError):
+        except (DecimalException, OverflowError, ValueError):
             return None
         return None
 
@@ -328,9 +333,17 @@ def _coerce(value: Any) -> Any:
     if isinstance(value, bool) or value is None:
         return value
     if isinstance(value, int):
-        return Decimal(value)
+        if value.bit_length() > 333:
+            return None
+        decimal = Decimal(value)
+        return decimal if decimal_within_limits(decimal) else None
     if isinstance(value, float):
-        return Decimal(str(value))
+        if not math.isfinite(value):
+            return None
+        decimal = Decimal(str(value))
+        return decimal if decimal_within_limits(decimal) else None
+    if isinstance(value, Decimal):
+        return value if decimal_within_limits(value) else None
     return value
 
 
@@ -341,13 +354,13 @@ def _power(base: Decimal, exponent: Decimal) -> Decimal | None:
             return None
         try:
             return base**power
-        except (InvalidOperation, OverflowError):
+        except (DecimalException, OverflowError):
             return None
     if base <= 0:
         return None
     try:
         return Decimal(str(float(base) ** float(exponent)))
-    except (InvalidOperation, OverflowError, ValueError):
+    except (DecimalException, OverflowError, ValueError):
         return None
 
 

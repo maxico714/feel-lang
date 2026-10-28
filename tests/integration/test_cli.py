@@ -67,6 +67,13 @@ def test_eval_oversized_context_file(capsys: pytest.CaptureFixture[str], tmp_pat
     assert code == EXIT_USAGE and "larger than" in err
 
 
+def test_eval_oversized_integer_is_a_config_error(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    context = tmp_path / "ctx.json"
+    context.write_text('{"x": ' + "9" * 5_000 + "}", encoding="utf-8")
+    code, _, err = run(capsys, "eval", "x", "--context", str(context))
+    assert code == EXIT_USAGE and "not valid JSON" in err
+
+
 def test_parse_prints_ast(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = run(capsys, "parse", "1 + 2", "--json")
     payload = json.loads(out)
@@ -138,6 +145,41 @@ def test_oracle_missing(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.
     cases.write_text(json.dumps([{"expression": "1 + 1", "context": {}}]), encoding="utf-8")
     code, _, err = run(capsys, "diff-oracle", "--expressions", str(cases))
     assert code == EXIT_ORACLE and "dsntk not found" in err
+
+
+def test_unicode_output_does_not_crash_on_lone_surrogates(tmp_path: Path) -> None:
+    import os
+
+    context = tmp_path / "ctx.json"
+    context.write_text('{"x": "\\ud800"}', encoding="ascii")
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(REPO / "src")
+    env["PYTHONIOENCODING"] = "utf-8"
+    result = subprocess.run(
+        [sys.executable, "-m", "feel_lang.cli", "eval", "x", "--context", str(context)],
+        cwd=REPO,
+        env=env,
+        capture_output=True,
+        text=False,
+        timeout=60,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert b"\\ud800" in result.stdout
+
+
+def test_oracle_cases_oversized_file_is_an_error(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    cases = tmp_path / "cases.json"
+    cases.write_text("[" + " " * (5 * 1024 * 1024) + "]", encoding="utf-8")
+    code, _, err = run(capsys, "diff-oracle", "--expressions", str(cases))
+    assert code == EXIT_ORACLE and "larger than" in err
+
+
+def test_oracle_cases_oversized_integer_is_an_error(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    cases = tmp_path / "cases.json"
+    cases.write_text('[{"expression": "x", "context": {"x": ' + "9" * 5_000 + "}}]", encoding="utf-8")
+    code, _, err = run(capsys, "diff-oracle", "--expressions", str(cases))
+    assert code == EXIT_ORACLE and "not valid JSON" in err
 
 
 def test_console_script_entry_point() -> None:

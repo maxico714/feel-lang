@@ -18,6 +18,7 @@ from .values import to_jsonable
 
 TIMEOUT_SECONDS = 20
 MAX_EXPRESSIONS = 500
+MAX_CASES_BYTES = 5 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -58,11 +59,20 @@ def find_oracle(explicit: str | None = None) -> str:
 
 
 def load_cases(path: str | Path) -> list[OracleCase]:
+    target = Path(path)
     try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        size = target.stat().st_size
+    except OSError as error:
+        raise OracleError(f"cannot read cases file: {error}") from error
+    if size > MAX_CASES_BYTES:
+        raise OracleError(f"cases file is larger than {MAX_CASES_BYTES} bytes")
+    try:
+        data = json.loads(target.read_text(encoding="utf-8"))
     except OSError as error:
         raise OracleError(f"cannot read cases file: {error}") from error
     except json.JSONDecodeError as error:
+        raise OracleError(f"cases file is not valid JSON: {error}") from error
+    except ValueError as error:  # e.g. an integer beyond CPython's int-string limit
         raise OracleError(f"cases file is not valid JSON: {error}") from error
     if isinstance(data, dict) and "cases" in data:
         data = data["cases"]

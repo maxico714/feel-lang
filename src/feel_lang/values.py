@@ -8,6 +8,8 @@ from decimal import Decimal, InvalidOperation
 
 MAX_LIST_LENGTH = 10_000
 MAX_DECIMAL_DIGITS = 100
+MAX_DECIMAL_ADJUSTED_EXPONENT = 100
+MAX_DURATION_COMPONENT_DIGITS = 18
 
 _NUMBER_RE = re.compile(r"^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$")
 _DURATION_RE = re.compile(
@@ -38,6 +40,10 @@ class Duration:
         parts = {key: value for key, value in match.groupdict().items() if value is not None}
         if not parts:
             return None
+        for key, value in parts.items():
+            digits = value.replace(".", "") if key == "seconds" else value
+            if len(digits) > MAX_DURATION_COMPONENT_DIGITS:
+                return None
         months = int(parts.get("years", 0)) * 12 + int(parts.get("months", 0))
         seconds = (
             Decimal(parts.get("days", 0)) * 86400
@@ -104,6 +110,15 @@ def to_decimal(value: int | float | Decimal) -> Decimal:
     return Decimal(str(value))
 
 
+def decimal_within_limits(value: Decimal) -> bool:
+    """Reject non-finite or absurdly large/small decimals before conversion or rendering."""
+    if not value.is_finite():
+        return False
+    if len(value.as_tuple().digits) > MAX_DECIMAL_DIGITS:
+        return False
+    return -MAX_DECIMAL_ADJUSTED_EXPONENT <= value.adjusted() <= MAX_DECIMAL_ADJUSTED_EXPONENT
+
+
 def number(value: str | int | float | Decimal) -> Decimal | None:
     """Parse a FEEL number literal into an exact Decimal, or return None."""
     text = str(value).strip()
@@ -113,7 +128,7 @@ def number(value: str | int | float | Decimal) -> Decimal | None:
         result = Decimal(text)
     except InvalidOperation:  # pragma: no cover - regex already rejects this
         return None
-    if len(result.as_tuple().digits) > MAX_DECIMAL_DIGITS:
+    if not decimal_within_limits(result):
         return None
     return result
 
@@ -163,19 +178,22 @@ def temporal_isoformat(value: Temporal) -> str:
 
 def add_duration(temporal: Temporal, duration: Duration) -> Temporal | None:
     """Add a duration to a date, time or date-time following FEEL type rules."""
-    if isinstance(temporal, _dt.time):
+    try:
+        if isinstance(temporal, _dt.time):
+            if duration.months:
+                return None
+            moment = _dt.datetime.combine(_dt.date(1970, 1, 1), temporal)
+            shifted = moment + _dt.timedelta(seconds=float(duration.seconds))
+            if shifted.date() != moment.date():
+                return None
+            return shifted.timetz().replace(tzinfo=None)
+        if duration.kind == "months" or (duration.months and not duration.seconds):
+            return _add_months(temporal, duration.months)
         if duration.months:
             return None
-        moment = _dt.datetime.combine(_dt.date(1970, 1, 1), temporal)
-        shifted = moment + _dt.timedelta(seconds=float(duration.seconds))
-        if shifted.date() != moment.date():
-            return None
-        return shifted.timetz().replace(tzinfo=None)
-    if duration.kind == "months" or (duration.months and not duration.seconds):
-        return _add_months(temporal, duration.months)
-    if duration.months:
+        return temporal + _dt.timedelta(seconds=float(duration.seconds))
+    except (OverflowError, ValueError):
         return None
-    return temporal + _dt.timedelta(seconds=float(duration.seconds))
 
 
 def _add_months(temporal: Temporal, months: int) -> Temporal:

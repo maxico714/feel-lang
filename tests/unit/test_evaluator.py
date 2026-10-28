@@ -238,3 +238,16 @@ def test_evaluator_does_not_execute_code() -> None:
 
 def test_deep_power_is_bounded() -> None:
     assert ev("2 ** 100000") is None
+    assert ev("1e100 ** 10000") is None
+
+
+def test_out_of_range_context_numbers_are_null() -> None:
+    assert ev("x", {"x": 10**500}) is None
+    assert ev("x", {"x": float("inf")}) is None
+    assert ev("x + 1", {"x": 10**500}) is None
+
+
+def test_temporal_overflow_is_null_not_an_exception() -> None:
+    assert ev('date("2024-01-01") + duration("P999999999Y")') is None
+    assert ev('@"2024-01-01" + @"P999999999Y"') is None
+    assert ev('duration("P' + "9" * 5_000 + 'Y")') is None

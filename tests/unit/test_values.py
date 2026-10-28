@@ -33,6 +33,17 @@ def test_duration_rejects_invalid() -> None:
         assert Duration.parse(text) is None
 
 
+def test_duration_rejects_oversized_components() -> None:
+    assert Duration.parse("P" + "9" * 5_000 + "Y") is None
+    assert Duration.parse("PT" + "9" * 5_000 + "S") is None
+    assert Duration.parse("P" + "9" * 5_000 + "DT1S") is None
+
+
+def test_add_duration_overflow_returns_none() -> None:
+    assert add_duration(dt.date(2024, 1, 1), Duration.parse("P999999999Y")) is None  # type: ignore[arg-type]
+    assert add_duration(dt.date(2024, 1, 1), Duration.parse("P999999999999999999D")) is None  # type: ignore[arg-type]
+
+
 def test_duration_isoformat_round_trip() -> None:
     for text in ["P1Y", "P1M", "P1D", "PT2H30M", "P1DT2H", "P1Y2M3DT4H5M6S", "PT0S"]:
         duration = Duration.parse(text)
@@ -79,6 +90,9 @@ def test_number_parsing() -> None:
 
 def test_number_digit_cap() -> None:
     assert number("1" * 101) is None
+    assert number("1e999999") is None
+    assert number("1e-999999") is None
+    assert number("1e100") is not None
 
 
 def test_to_decimal_from_float_uses_repr() -> None:

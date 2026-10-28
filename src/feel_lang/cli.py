@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 from collections.abc import Sequence
@@ -66,6 +67,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    _configure_output()
     parser = build_parser()
     arguments = parser.parse_args(list(argv) if argv is not None else None)
     try:
@@ -97,6 +99,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     raise AssertionError(f"unhandled command {arguments.command}")  # pragma: no cover
 
 
+def _configure_output() -> None:
+    """Never crash on characters the terminal encoding cannot represent."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            with contextlib.suppress(OSError, ValueError):
+                reconfigure(errors="backslashreplace")
+
+
 def _load_json(path: str, what: str) -> Any:
     target = Path(path)
     try:
@@ -110,6 +121,8 @@ def _load_json(path: str, what: str) -> Any:
     except (OSError, UnicodeDecodeError) as error:
         raise ConfigError(f"cannot read {what} file '{path}': {error}") from error
     except json.JSONDecodeError as error:
+        raise ConfigError(f"{what} file '{path}' is not valid JSON: {error}") from error
+    except ValueError as error:  # e.g. an integer beyond CPython's int-string limit
         raise ConfigError(f"{what} file '{path}' is not valid JSON: {error}") from error
 
 
@@ -187,7 +200,7 @@ def _command_doctor(arguments: argparse.Namespace) -> int:
         print(f"python: {report['python']} ({report['platform']})")
         print(f"oracle: {oracle or 'not found (optional; needed only for diff-oracle)'}")
         print("subset: literals, arithmetic, comparison, three-valued logic, ranges, lists,")
-        print("        contexts, if-then-else, filters, 16 built-in functions, decision tables")
+        print("        contexts, if-then-else, 16 built-in functions, decision tables")
         print("OK")
     return EXIT_OK
 

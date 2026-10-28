@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from .errors import ParseError
+from .values import decimal_within_limits
 
 MAX_INPUT_CHARS = 20_000
 MAX_TOKENS = 5_000
@@ -140,9 +141,12 @@ def _read_number(text: str, index: int) -> tuple[Decimal, int]:
             index = probe
     literal = text[start:index]
     try:
-        return Decimal(literal), index
+        value = Decimal(literal)
     except Exception as error:  # pragma: no cover - Decimal accepts what we lex
         raise ParseError(f"invalid number {literal!r}", position=start) from error
+    if not decimal_within_limits(value):
+        raise ParseError("number literal is outside the supported decimal range", position=start)
+    return value, index
 
 
 def _read_string(text: str, index: int) -> tuple[str, int]:
@@ -164,7 +168,10 @@ def _read_string(text: str, index: int) -> tuple[str, int]:
                 digits = text[index + 2 : index + 6]
                 if len(digits) != 4 or any(item not in "0123456789abcdefABCDEF" for item in digits):
                     raise ParseError("invalid unicode escape", position=index)
-                pieces.append(chr(int(digits, 16)))
+                codepoint = int(digits, 16)
+                if 0xD800 <= codepoint <= 0xDFFF:
+                    raise ParseError("unicode escape is a lone surrogate", position=index)
+                pieces.append(chr(codepoint))
                 index += 6
                 continue
             raise ParseError(f"invalid escape sequence '\\{escaped}'", position=index)

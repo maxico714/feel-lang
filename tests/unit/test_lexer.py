@@ -90,6 +90,16 @@ def test_invalid_unicode_escape() -> None:
         tokenize(r'"\u12"')
     with pytest.raises(ParseError):
         tokenize(r'"\uzzzz"')
+    with pytest.raises(ParseError) as caught:
+        tokenize(r'"\uD800"')
+    assert "surrogate" in caught.value.message
+
+
+def test_out_of_range_numeric_literals_are_rejected() -> None:
+    for text in ["1e999999", "1e-999999", "0." + "1" * 101]:
+        with pytest.raises(ParseError) as caught:
+            tokenize(text)
+        assert "decimal range" in caught.value.message
 
 
 def test_unterminated_block_comment() -> None:
